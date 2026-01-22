@@ -47,7 +47,7 @@ describe('Rotator Service', () => {
   describe('calculateRotations', () => {
     const mockBestPool = {
       symbol: 'mUSDC',
-      project: 'moonwell',
+      project: 'moonwell-lending',
       apy: 6.5,
     };
 

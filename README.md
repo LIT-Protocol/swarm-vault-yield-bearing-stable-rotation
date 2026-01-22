@@ -48,6 +48,11 @@ This script is designed to be **run manually** whenever you want to check for yi
 - The APY improvement exceeds your `MIN_APY_IMPROVEMENT` threshold (default: 0.5%)
 - The member's balance exceeds `MIN_BALANCE_USD` (default: $10)
 
+**Inspect Current Yields:**
+```bash
+npm run yields
+```
+
 **Dry Run (simulate without executing swaps):**
 ```bash
 npm run start:dry

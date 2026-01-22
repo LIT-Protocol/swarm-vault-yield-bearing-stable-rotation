@@ -28,7 +28,7 @@ const mockYieldPools = [
     pool: 'moonwell-base-usdc',
     chain: 'Base',
     symbol: 'USDC',
-    project: 'moonwell',
+    project: 'moonwell-lending',
     apy: 6.1,
     tvlUsd: 7500000,
     stablecoin: true,
@@ -37,7 +37,7 @@ const mockYieldPools = [
     pool: 'moonwell-base-dai',
     chain: 'Base',
     symbol: 'DAI',
-    project: 'moonwell',
+    project: 'moonwell-lending',
     apy: 4.8,
     tvlUsd: 3000000,
     stablecoin: true,
@@ -89,7 +89,7 @@ describe('Balance Service', () => {
 
       expect(daiHolding.hasYieldData).toBe(true);
       expect(daiHolding.currentApy).toBe(4.8);
-      expect(daiHolding.matchedProject).toBe('moonwell');
+      expect(daiHolding.matchedProject).toBe('moonwell-lending');
     });
 
     it('should mark non-matching holdings as no yield data', () => {

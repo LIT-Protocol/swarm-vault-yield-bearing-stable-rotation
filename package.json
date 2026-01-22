@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "start:dry": "node src/index.js --dry-run",
+    "yields": "node src/inspect-yields.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "keywords": [

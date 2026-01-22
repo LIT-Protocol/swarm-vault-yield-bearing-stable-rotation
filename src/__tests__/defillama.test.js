@@ -31,7 +31,7 @@ const mockPools = [
     pool: 'pool-3',
     chain: 'Base',
     symbol: 'USDC',
-    project: 'moonwell',
+    project: 'moonwell-lending',
     apy: 6.1,
     tvlUsd: 750000,
     stablecoin: true,
@@ -219,10 +219,10 @@ describe('DeFiLlama Service', () => {
   describe('tokenAddressMap', () => {
     it('should have mappings for DEX-swappable protocols', () => {
       // Only includes protocols with DEX-swappable yield tokens
-      // compound-v3 was removed because cUSDCv3 is NOT DEX-swappable
+      // Project names match DeFiLlama's naming convention
       expect(tokenAddressMap['aave-v3']).toBeDefined();
-      expect(tokenAddressMap['moonwell']).toBeDefined();
-      expect(tokenAddressMap['seamless-protocol']).toBeDefined();
+      expect(tokenAddressMap['moonwell-lending']).toBeDefined();
+      expect(tokenAddressMap['seamless-v2']).toBeDefined();
     });
 
     it('should have valid Ethereum addresses', () => {

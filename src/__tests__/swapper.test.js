@@ -23,7 +23,7 @@ describe('Swapper Service', () => {
       },
       toToken: {
         symbol: 'mUSDC',
-        project: 'moonwell',
+        project: 'moonwell-lending',
         targetApy: 6.5,
       },
       apyImprovement: 1.5,

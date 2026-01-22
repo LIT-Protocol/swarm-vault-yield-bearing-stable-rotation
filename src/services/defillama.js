@@ -26,13 +26,15 @@ export const tokenAddressMap = {
   //   'USDC': '0xb125E6687d4313864e53df431d5425969c15Eb2F', // cUSDCv3 - NOT DEX swappable
   // },
   // Moonwell on Base - mUSDC and mDAI are DEX-swappable, mUSDbC is NOT
-  'moonwell': {
+  // DeFiLlama uses 'moonwell-lending' as the project name
+  'moonwell-lending': {
     'USDC': '0xEdc817A28E8B93B03976FBd4a3dDBc9f7D176c22', // mUSDC - DEX swappable ✓
     // 'USDbC': '0x703843C3379b52F9FF486c9f5892218d2a065cC8', // mUSDbC - NOT DEX swappable
     'DAI': '0x73b06D8d18De422E269645eaCe15400DE7462417', // mDAI - DEX swappable ✓
   },
   // Seamless Protocol on Base - sUSDC is DEX-swappable
-  'seamless-protocol': {
+  // DeFiLlama uses 'seamless-v2' as the project name
+  'seamless-v2': {
     'USDC': '0x53E240C0F985175dA046A62F26D490d1E259036e', // sUSDC - DEX swappable ✓
   },
 };

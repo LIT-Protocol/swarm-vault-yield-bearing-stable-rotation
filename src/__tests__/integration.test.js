@@ -33,7 +33,7 @@ describe('Integration: Full Rotation Pipeline', () => {
     {
       pool: 'moonwell-base-usdc',
       chain: 'Base',
-      project: 'moonwell',
+      project: 'moonwell-lending',
       symbol: 'USDC',
       apy: 6.5,
       tvlUsd: 25000000,
@@ -42,7 +42,7 @@ describe('Integration: Full Rotation Pipeline', () => {
     {
       pool: 'moonwell-base-dai',
       chain: 'Base',
-      project: 'moonwell',
+      project: 'moonwell-lending',
       symbol: 'DAI',
       apy: 5.0,
       tvlUsd: 8000000,
@@ -174,7 +174,7 @@ describe('Integration: Full Rotation Pipeline', () => {
       const top = getTopYieldingStable(filtered);
 
       expect(top.symbol).toBe('USDC');
-      expect(top.project).toBe('moonwell');
+      expect(top.project).toBe('moonwell-lending');
       expect(top.apy).toBe(6.5);
     });
   });
