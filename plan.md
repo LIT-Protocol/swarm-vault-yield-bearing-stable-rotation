@@ -25,7 +25,7 @@ Users hold yield-bearing stablecoins (like aUSDC, sDAI, etc.) but yields fluctua
 └──────────────────┘
 ```
 
-**Usage:** Run manually once daily via `npm start` or `node src/index.js`
+**Usage:** Run manually via `npm start` or `node src/index.js`. The script checks current yields and rotates holdings if the APY improvement exceeds the configured threshold. Run as often as desired (daily, weekly, or on-demand).
 
 ## Components
 
@@ -235,3 +235,58 @@ FOR each swarm member:
    - Fixed by only allowing yield-bearing tokens (aUSDC, mUSDC, cUSDCv3, etc.) to match to pools
    - Plain stablecoins now correctly show 0% APY, triggering rotation recommendations
 3. **filterYieldBearingHoldings updated** - Now includes plain stablecoins (USDC, DAI) as candidates for rotation into yield-bearing positions
+
+### Phase 5 Learnings (2026-01-22)
+
+**SwarmVault SDK Swap Integration:**
+- Successfully integrated SwarmVault SDK for swap execution
+- Flow: `previewSwap()` → `executeSwap()` → `waitForTransaction()`
+- Added `membershipId` to rotation objects for targeted member swaps
+- Transaction logging includes transactionId for tracking
+
+**Critical Discovery - Yield Protocol Deposits:**
+- **DEX swaps cannot deposit into yield protocols** - Yield-bearing tokens like cUSDCv3, aBasUSDC, mUSDC are NOT tradeable on DEXes
+- Attempted swap: USDC → cUSDCv3 (Compound V3) failed with `totalBuyAmount: 0`
+- The 0x aggregator cannot find a route because these tokens must be minted by depositing into the protocol
+
+**Architecture Implication:**
+To rotate into yield-bearing positions, the system needs protocol-specific deposit calls:
+- **Compound V3**: Call `supply(asset, amount)` on the Comet contract
+- **Aave V3**: Call `supply(asset, amount, onBehalfOf, referralCode)` on the Pool contract
+- **Moonwell**: Call `mint(mintAmount)` on the mToken contract
+
+**Solution Options:**
+1. Use SwarmVault's `executeTransaction` with ABI mode to call protocol deposit functions
+2. Limit rotation to protocols with tradeable vault tokens (some Yearn/Beefy vaults are DEX-tradeable)
+3. Implement protocol-specific adapters for each yield source
+
+**Swap Execution Status:**
+- ✅ Token-to-token swaps via DEX work correctly
+- ✅ DEX-swappable yield tokens verified and working (aBasUSDC, mUSDC, mDAI, sUSDC)
+- ⚠️ Protocol deposits for non-DEX tokens require direct contract calls (not implemented)
+
+### DEX Swappability Testing (2026-01-22)
+
+**Tested all mapped yield tokens for DEX swappability:**
+
+| Token | Protocol | Address | DEX Swappable |
+|-------|----------|---------|---------------|
+| aBasUSDC | Aave V3 | 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB | ✅ YES |
+| aBasUSDbC | Aave V3 | 0x0a1d576f3eFeB55CCf1A5452F3cDE8a5B161BCaD | ❌ NO |
+| cUSDCv3 | Compound V3 | 0xb125E6687d4313864e53df431d5425969c15Eb2F | ❌ NO |
+| mUSDC | Moonwell | 0xEdc817A28E8B93B03976FBd4a3dDBc9f7D176c22 | ✅ YES |
+| mUSDbC | Moonwell | 0x703843C3379b52F9FF486c9f5892218d2a065cC8 | ❌ NO |
+| mDAI | Moonwell | 0x73b06D8d18De422E269645eaCe15400DE7462417 | ✅ YES |
+| sUSDC | Seamless | 0x53E240C0F985175dA046A62F26D490d1E259036e | ✅ YES |
+
+**Implementation Changes:**
+1. Removed non-DEX-swappable tokens from `tokenAddressMap` in defillama.js
+2. Added `isTokenSwappable()` function to validate via swap preview
+3. Added `filterSwappablePools()` to filter pools by DEX swappability
+4. Added `getMappedProtocolPools()` to find pools from verified protocols
+5. Updated main flow to only recommend verified DEX-swappable yield tokens
+
+**Live Test Successful:**
+- Successfully swapped 22.26 USDC → 22.12 aBasUSDC (Aave V3)
+- Transaction ID: 4a12db0e-596d-46c2-992f-34e897efb767
+- APY gain: 3.55%

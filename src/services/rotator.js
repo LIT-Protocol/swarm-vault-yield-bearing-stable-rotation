@@ -32,9 +32,13 @@ export function calculateRotations(users, bestPool) {
 
   for (const user of users) {
     for (const holding of user.yieldBearingHoldings || []) {
-      // Skip if user already holds the best yielding token
-      if (holding.symbol?.toLowerCase() === bestPool.symbol?.toLowerCase()) {
-        logger.debug(`User ${user.address} already holds best yielding token ${bestPool.symbol}`);
+      // Skip if user is already in the best yielding pool (same project + similar APY)
+      // Don't skip just because symbols match - plain USDC != yield-bearing USDC
+      const isInBestPool = holding.matchedProject === bestPool.project &&
+                           Math.abs((holding.currentApy || 0) - bestPool.apy) < 0.1;
+
+      if (isInBestPool) {
+        logger.debug(`User ${user.address} already in best pool ${bestPool.project} at ${holding.currentApy?.toFixed(2)}% APY`);
         continue;
       }
 
@@ -42,14 +46,17 @@ export function calculateRotations(users, bestPool) {
       if (shouldRotate(holding.currentApy, bestPool.apy)) {
         const rotation = {
           userAddress: user.address,
+          membershipId: user.membershipId, // Include membership ID for targeted swap
           fromToken: {
             symbol: holding.symbol,
+            address: holding.address,
             balance: holding.balance,
             balanceUsd: holding.balanceUsd,
             currentApy: holding.currentApy,
           },
           toToken: {
             symbol: bestPool.symbol,
+            address: bestPool.tokenAddress,
             project: bestPool.project,
             targetApy: bestPool.apy,
           },

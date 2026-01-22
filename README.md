@@ -1,14 +1,16 @@
 # Swarm Vault Yield Rotator
 
-An automated service that maximizes yield for Swarm Vault members by continuously rotating their stablecoin holdings into the highest-yielding options available on Base chain.
+A manual yield optimization service for Swarm Vault managers. Run this script to rotate swarm member stablecoin holdings into higher-yielding options on Base chain.
 
 ## Overview
 
-Users hold yield-bearing stablecoins (like aUSDC, cUSDCv3, mUSDC) but yields fluctuate daily. This service automatically:
+Users hold yield-bearing stablecoins (like aUSDC, mUSDC, sUSDC) but yields fluctuate over time. This service:
 
 1. Monitors all yield-bearing stablecoin APYs on Base via DeFiLlama
 2. Checks each swarm member's current holdings
 3. Swaps into higher-yielding alternatives when beneficial
+
+**Important**: This script runs manually - you decide when to run it. Each execution checks current yields and performs rotations if they make financial sense based on your configured thresholds.
 
 ## Quick Start
 
@@ -42,6 +44,10 @@ LOG_LEVEL=INFO             # DEBUG, INFO, WARN, ERROR
 
 ### Usage
 
+This script is designed to be **run manually** whenever you want to check for yield optimization opportunities. Rotations only occur if:
+- The APY improvement exceeds your `MIN_APY_IMPROVEMENT` threshold (default: 0.5%)
+- The member's balance exceeds `MIN_BALANCE_USD` (default: $10)
+
 **Dry Run (simulate without executing swaps):**
 ```bash
 npm run start:dry
@@ -51,6 +57,11 @@ npm run start:dry
 ```bash
 npm start
 ```
+
+**Suggested Usage Patterns:**
+- Run daily or weekly to check for yield opportunities
+- Run after significant market APY changes
+- Use dry-run first to preview what rotations would occur
 
 ### Running Tests
 
@@ -89,18 +100,36 @@ FOR each swarm member:
 
 ## Supported Tokens
 
+### DEX-Swappable Yield Tokens (Rotation Targets)
+
+These tokens can be swapped into via DEX and are used as rotation targets:
+
+| Token | Address | Protocol |
+|-------|---------|----------|
+| aBasUSDC | `0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB` | Aave V3 |
+| mUSDC | `0xEdc817A28E8B93B03976FBd4a3dDBc9f7D176c22` | Moonwell |
+| mDAI | `0x73b06D8d18De422E269645eaCe15400DE7462417` | Moonwell |
+| sUSDC | `0x53E240C0F985175dA046A62F26D490d1E259036e` | Seamless Protocol |
+
+### Base Stablecoins (Rotation Sources)
+
+Plain stablecoins that can be rotated into yield-bearing positions:
+
 | Token | Address | Protocol |
 |-------|---------|----------|
 | USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | Native |
 | USDbC | `0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA` | Native (Bridged) |
 | DAI | `0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb` | Native |
-| aBasUSDC | `0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB` | Aave V3 |
-| aBasUSDbC | `0x0a1d576f3eFeB55CCf1A5452F3cDE8a5B161BCaD` | Aave V3 |
-| cUSDCv3 | `0xb125E6687d4313864e53df431d5425969c15Eb2F` | Compound V3 |
-| mUSDC | `0xEdc817A28E8B93B03976FBd4a3dDBc9f7D176c22` | Moonwell |
-| mUSDbC | `0x703843C3379b52F9FF486c9f5892218d2a065cC8` | Moonwell |
-| mDAI | `0x73b06D8d18De422E269645eaCe15400DE7462417` | Moonwell |
-| sUSDC | `0x53E240C0F985175dA046A62F26D490d1E259036e` | Seamless Protocol |
+
+### Not DEX-Swappable (Require Protocol Deposits)
+
+These tokens require direct protocol deposits and are not currently supported as rotation targets:
+
+| Token | Address | Protocol | Reason |
+|-------|---------|----------|--------|
+| cUSDCv3 | `0xb125E6687d4313864e53df431d5425969c15Eb2F` | Compound V3 | Requires `supply()` call |
+| aBasUSDbC | `0x0a1d576f3eFeB55CCf1A5452F3cDE8a5B161BCaD` | Aave V3 | No DEX liquidity |
+| mUSDbC | `0x703843C3379b52F9FF486c9f5892218d2a065cC8` | Moonwell | No DEX liquidity |
 
 ## Configuration Options
 

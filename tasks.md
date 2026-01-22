@@ -76,11 +76,22 @@
 - [x] Create swapper service (`src/services/swapper.js`)
 - [x] Implement `executeSwap(user, fromToken, toToken, amount)` function
   - Dry-run mode support
-  - TODO: Implement actual SDK integration for live swaps
+  - Full SwarmVault SDK integration for live swaps
 - [x] Implement `validateSwap()` for pre-execution validation
 - [x] Implement `executeRotations()` for batch processing
-- [ ] Integrate with @swarmvault/sdk for actual swap execution
-- [ ] Add transaction hash logging from SDK responses
+- [x] Integrate with @swarmvault/sdk for actual swap execution
+  - Preview swap before execution
+  - Execute with transaction confirmation
+  - Support targeted member swaps via membershipId
+- [x] Add transaction hash logging from SDK responses
+- [x] Add DEX swappability validation
+  - `isTokenSwappable()` - validates tokens via swap preview
+  - `filterSwappablePools()` - filters to only DEX-swappable tokens
+  - `getMappedProtocolPools()` - finds pools from verified protocols
+- [x] Filter tokenAddressMap to only DEX-swappable tokens:
+  - ✅ aBasUSDC (Aave V3), mUSDC (Moonwell), mDAI (Moonwell), sUSDC (Seamless)
+  - ❌ Removed: cUSDCv3 (Compound), aBasUSDbC (Aave), mUSDbC (Moonwell)
+- [x] Live swap test successful (USDC → aBasUSDC)
 
 ## Phase 6: Main Orchestration
 

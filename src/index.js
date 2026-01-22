@@ -1,9 +1,9 @@
 import { config } from './config.js';
 import { logger } from './utils/logger.js';
-import { getBaseYieldData } from './services/defillama.js';
+import { getBaseYieldData, getMappedProtocolPools } from './services/defillama.js';
 import { getEnrichedMemberData } from './services/balances.js';
 import { calculateRotations, prioritizeRotations, getRotationSummary } from './services/rotator.js';
-import { executeRotations, validateSwap } from './services/swapper.js';
+import { executeRotations, validateSwap, filterSwappablePools } from './services/swapper.js';
 
 /**
  * Main rotation function - orchestrates the yield rotation process
@@ -27,12 +27,35 @@ async function runRotation() {
     logger.info('Step 1: Fetching yield data from DeFiLlama...');
     const yieldData = await getBaseYieldData();
 
-    if (!yieldData.topYielding) {
+    if (!yieldData.pools || yieldData.pools.length === 0) {
       logger.warn('No yield-bearing stablecoins found on Base. Exiting.');
       return stats;
     }
 
-    logger.info(`Best yield available: ${yieldData.topYielding.symbol} at ${yieldData.topYielding.apy.toFixed(2)}% APY`);
+    // Step 1b: Get pools from our mapped protocols (verified DEX-swappable tokens)
+    logger.info('Step 1b: Finding DEX-swappable yield pools from mapped protocols...');
+
+    // Get pools from protocols we've verified have DEX-swappable tokens
+    const mappedPools = getMappedProtocolPools(yieldData.pools);
+
+    if (mappedPools.length === 0) {
+      logger.warn('No pools from mapped protocols found. Cannot proceed with DEX swaps.');
+      logger.warn('Consider adding more protocols to tokenAddressMap in defillama.js');
+      return stats;
+    }
+
+    // Validate swappability via DEX preview (cached after first check)
+    const swappablePools = await filterSwappablePools(mappedPools);
+
+    let bestSwappablePool;
+    if (swappablePools.length === 0) {
+      logger.warn('No DEX-swappable yield tokens verified. Using best mapped pool.');
+      bestSwappablePool = mappedPools[0];
+      logger.info(`Using: ${bestSwappablePool.symbol} at ${bestSwappablePool.apy.toFixed(2)}% APY (${bestSwappablePool.project})`);
+    } else {
+      bestSwappablePool = swappablePools[0];
+      logger.info(`Best verified DEX-swappable: ${bestSwappablePool.symbol} at ${bestSwappablePool.apy.toFixed(2)}% APY (${bestSwappablePool.project})`);
+    }
 
     // Step 2: Get swarm member balances
     logger.info('Step 2: Fetching swarm member balances...');
@@ -48,7 +71,7 @@ async function runRotation() {
 
     // Step 3: Calculate needed rotations
     logger.info('Step 3: Calculating rotation opportunities...');
-    const rotations = calculateRotations(members, yieldData.topYielding);
+    const rotations = calculateRotations(members, bestSwappablePool);
     const prioritizedRotations = prioritizeRotations(rotations);
 
     // Log rotation summary

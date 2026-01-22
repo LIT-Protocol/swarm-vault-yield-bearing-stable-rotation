@@ -11,34 +11,29 @@ const MAX_STABLE_APY = 25;
 /**
  * Token address mapping: DeFiLlama pool symbols/projects -> Base chain contract addresses
  * Maps yield-bearing stablecoin pools to their actual token addresses on Base
+ *
+ * IMPORTANT: Only include tokens that are DEX-swappable (verified via swap preview)
+ * Tokens like cUSDCv3 (Compound) require protocol deposits, not DEX swaps
  */
 export const tokenAddressMap = {
-  // Aave V3 on Base
+  // Aave V3 on Base - aBasUSDC is DEX-swappable, aBasUSDbC is NOT
   'aave-v3': {
-    'USDC': '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB', // aBasUSDC
-    'USDbC': '0x0a1d576f3eFeB55CCf1A5452F3cDE8a5B161BCaD', // aBasUSDbC
+    'USDC': '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB', // aBasUSDC - DEX swappable ✓
+    // 'USDbC': '0x0a1d576f3eFeB55CCf1A5452F3cDE8a5B161BCaD', // aBasUSDbC - NOT DEX swappable
   },
-  // Compound V3 on Base
-  'compound-v3': {
-    'USDC': '0xb125E6687d4313864e53df431d5425969c15Eb2F', // cUSDCv3
-  },
-  // Moonwell on Base
+  // Compound V3 - NOT DEX-swappable (requires protocol deposit)
+  // 'compound-v3': {
+  //   'USDC': '0xb125E6687d4313864e53df431d5425969c15Eb2F', // cUSDCv3 - NOT DEX swappable
+  // },
+  // Moonwell on Base - mUSDC and mDAI are DEX-swappable, mUSDbC is NOT
   'moonwell': {
-    'USDC': '0xEdc817A28E8B93B03976FBd4a3dDBc9f7D176c22', // mUSDC
-    'USDbC': '0x703843C3379b52F9FF486c9f5892218d2a065cC8', // mUSDbC
-    'DAI': '0x73b06D8d18De422E269645eaCe15400DE7462417', // mDAI
+    'USDC': '0xEdc817A28E8B93B03976FBd4a3dDBc9f7D176c22', // mUSDC - DEX swappable ✓
+    // 'USDbC': '0x703843C3379b52F9FF486c9f5892218d2a065cC8', // mUSDbC - NOT DEX swappable
+    'DAI': '0x73b06D8d18De422E269645eaCe15400DE7462417', // mDAI - DEX swappable ✓
   },
-  // Seamless Protocol on Base
+  // Seamless Protocol on Base - sUSDC is DEX-swappable
   'seamless-protocol': {
-    'USDC': '0x53E240C0F985175dA046A62F26D490d1E259036e', // sUSDC
-  },
-  // Morpho on Base (various vaults)
-  'morpho-blue': {
-    'USDC': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Uses underlying USDC
-  },
-  // Extra Finance on Base
-  'extra-finance': {
-    'USDC': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Uses underlying USDC
+    'USDC': '0x53E240C0F985175dA046A62F26D490d1E259036e', // sUSDC - DEX swappable ✓
   },
 };
 
@@ -96,7 +91,7 @@ export async function fetchYieldPools() {
 }
 
 /**
- * Filter pools for Base chain stablecoins with adequate liquidity
+ * Filter pools for Base chain USD stablecoins with adequate liquidity
  * Excludes volatile LP positions with unrealistically high APYs
  * @param {Array} pools - All pools from DeFiLlama
  * @param {number} minTvl - Minimum TVL in USD (default 100k)
@@ -104,13 +99,20 @@ export async function fetchYieldPools() {
  * @returns {Array} Filtered stablecoin pools on Base
  */
 export function filterBaseStablecoins(pools, minTvl = 100000, maxApy = MAX_STABLE_APY) {
+  // Only include USD-based stablecoins (not EURC, GBP, etc.)
+  const usdSymbols = ['USDC', 'USDT', 'DAI', 'USDBC', 'FRAX', 'LUSD', 'GUSD', 'BUSD', 'TUSD', 'USD+', 'DOLA'];
+
   const filtered = pools.filter(pool => {
     const isBase = pool.chain === config.chain;
     const isStablecoin = pool.stablecoin === true;
     const hasMinTvl = (pool.tvlUsd || 0) >= minTvl;
     const belowMaxApy = (pool.apy || 0) <= maxApy;
 
-    return isBase && isStablecoin && hasMinTvl && belowMaxApy;
+    // Check if the pool symbol contains a USD stablecoin
+    const symbol = pool.symbol?.toUpperCase() || '';
+    const isUsdBased = usdSymbols.some(usd => symbol.includes(usd));
+
+    return isBase && isStablecoin && hasMinTvl && belowMaxApy && isUsdBased;
   });
 
   // Also log how many were excluded for high APY
@@ -131,6 +133,7 @@ export function filterBaseStablecoins(pools, minTvl = 100000, maxApy = MAX_STABL
 
 /**
  * Get the highest yielding stablecoin pool on Base
+ * Only returns pools where we have a known token address for the yield-bearing token
  * @param {Array} pools - Filtered pools (should already be Base stablecoins)
  * @returns {Object|null} Best pool with APY and token details
  */
@@ -140,14 +143,31 @@ export function getTopYieldingStable(pools) {
     return null;
   }
 
-  // Sort by APY descending and get the best one
+  // Sort by APY descending
   const sorted = [...pools].sort((a, b) => (b.apy || 0) - (a.apy || 0));
+
+  // Find the best pool that has a known token address
+  // This ensures we can actually execute the swap
+  for (const pool of sorted) {
+    const tokenAddress = getTokenAddress(pool.project, pool.symbol);
+    if (tokenAddress) {
+      logger.info(`Top yielding stablecoin: ${pool.symbol} at ${pool.apy?.toFixed(2)}% APY (${pool.project})`);
+
+      return {
+        pool: pool.pool,
+        symbol: pool.symbol,
+        project: pool.project,
+        apy: pool.apy || 0,
+        tvlUsd: pool.tvlUsd,
+        underlyingTokens: pool.underlyingTokens || [],
+        tokenAddress,
+      };
+    }
+  }
+
+  // Fallback to best pool even without token address
   const best = sorted[0];
-
-  // Try to get the token address from our mapping
-  const tokenAddress = getTokenAddress(best.project, best.symbol);
-
-  logger.info(`Top yielding stablecoin: ${best.symbol} at ${best.apy?.toFixed(2)}% APY (${best.project})`);
+  logger.warn(`Best pool ${best.project} ${best.symbol} has no mapped token address - swap may fail`);
 
   return {
     pool: best.pool,
@@ -156,7 +176,7 @@ export function getTopYieldingStable(pools) {
     apy: best.apy || 0,
     tvlUsd: best.tvlUsd,
     underlyingTokens: best.underlyingTokens || [],
-    tokenAddress,
+    tokenAddress: null,
   };
 }
 
@@ -193,6 +213,43 @@ export function getTopYieldingStables(pools, count = 5) {
 }
 
 /**
+ * Get all pools from our mapped protocols, sorted by APY
+ * These are protocols where we have verified DEX-swappable yield tokens
+ * @param {Array} pools - Filtered pools (should already be Base stablecoins)
+ * @returns {Array} Array of pools from mapped protocols with token addresses
+ */
+export function getMappedProtocolPools(pools) {
+  if (!pools || pools.length === 0) {
+    logger.warn('No pools available');
+    return [];
+  }
+
+  const mappedProjects = Object.keys(tokenAddressMap);
+
+  // Find pools from our mapped protocols
+  const mappedPools = pools
+    .filter(pool => mappedProjects.includes(pool.project))
+    .map(pool => ({
+      pool: pool.pool,
+      symbol: pool.symbol,
+      project: pool.project,
+      apy: pool.apy || 0,
+      tvlUsd: pool.tvlUsd,
+      underlyingTokens: pool.underlyingTokens || [],
+      tokenAddress: getTokenAddress(pool.project, pool.symbol),
+    }))
+    .filter(pool => pool.tokenAddress !== null) // Only include pools with mapped addresses
+    .sort((a, b) => b.apy - a.apy); // Sort by APY descending
+
+  logger.info(`Found ${mappedPools.length} pools from mapped protocols:`);
+  mappedPools.forEach((pool, i) => {
+    logger.info(`  ${i + 1}. ${pool.symbol} at ${pool.apy?.toFixed(2)}% APY (${pool.project})`);
+  });
+
+  return mappedPools;
+}
+
+/**
  * Get yield data for a specific token/pool
  * @param {Array} pools - All pools
  * @param {string} symbol - Token symbol to find
@@ -226,6 +283,7 @@ export default {
   filterBaseStablecoins,
   getTopYieldingStable,
   getTopYieldingStables,
+  getMappedProtocolPools,
   getPoolBySymbol,
   getBaseYieldData,
   getTokenAddress,

@@ -217,10 +217,12 @@ describe('DeFiLlama Service', () => {
   });
 
   describe('tokenAddressMap', () => {
-    it('should have mappings for major protocols', () => {
+    it('should have mappings for DEX-swappable protocols', () => {
+      // Only includes protocols with DEX-swappable yield tokens
+      // compound-v3 was removed because cUSDCv3 is NOT DEX-swappable
       expect(tokenAddressMap['aave-v3']).toBeDefined();
-      expect(tokenAddressMap['compound-v3']).toBeDefined();
       expect(tokenAddressMap['moonwell']).toBeDefined();
+      expect(tokenAddressMap['seamless-protocol']).toBeDefined();
     });
 
     it('should have valid Ethereum addresses', () => {
