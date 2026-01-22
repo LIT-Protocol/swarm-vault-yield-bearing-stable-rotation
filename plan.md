@@ -137,3 +137,32 @@ FOR each swarm member:
 - ES modules (`"type": "module"`) working well with Node.js
 - Logger utility provides good visibility into rotation decisions
 - Dry-run mode essential for testing without executing swaps
+
+### Phase 2 Learnings (2026-01-22)
+
+**Token Address Mapping:**
+- Successfully mapped yield-bearing tokens from major protocols on Base:
+  - Aave V3: aBasUSDC (`0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB`), aBasUSDbC
+  - Compound V3: cUSDCv3 (`0xb125E6687d4313864e53df431d5425969c15Eb2F`)
+  - Moonwell: mUSDC, mUSDbC, mDAI
+  - Seamless Protocol: sUSDC
+- Token address lookup implemented via `getTokenAddress(project, symbol)` function
+
+**APY Filtering:**
+- Added max APY ceiling of 25% to filter out volatile LP positions
+- This prevents the system from recommending high-risk pools with unsustainable yields
+- filterBaseStablecoins now accepts `maxApy` parameter for flexibility
+
+**New Functions Added:**
+- `getTopYieldingStables(pools, count)` - Returns top N pools for comparison
+- `getTokenAddress(project, symbol)` - Maps pool to contract address
+
+**Testing:**
+- 21 unit tests covering all DeFiLlama service functions
+- Tests use mock pool data to avoid API calls
+- All tests passing with Jest ES modules support
+
+**Recommendations for Phase 3:**
+- Balance service will need to query token balances using the mapped addresses
+- Consider caching token address lookups for performance
+- May need to add more protocols as they become available on Base
