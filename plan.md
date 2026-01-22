@@ -162,7 +162,41 @@ FOR each swarm member:
 - Tests use mock pool data to avoid API calls
 - All tests passing with Jest ES modules support
 
-**Recommendations for Phase 3:**
-- Balance service will need to query token balances using the mapped addresses
-- Consider caching token address lookups for performance
-- May need to add more protocols as they become available on Base
+### Phase 3 Learnings (2026-01-22)
+
+**SwarmVault SDK Integration:**
+- Successfully integrated `@swarmvault/sdk` for fetching member balances
+- SDK provides `getSwarmHoldings(swarmId, { includeMembers: true })` to get per-member balances
+- Response includes: `membershipId`, `agentWalletAddress`, `userWalletAddress`, `ethBalance`, `tokens[]`
+- Token balances are in raw units (smallest denomination) - formatted using BigInt arithmetic
+
+**Token Matching Strategy:**
+- Implemented multi-level pool lookup for matching holdings to yield pools:
+  1. **Address match (priority)**: Most accurate, uses tokenAddressMap from Phase 2
+  2. **Symbol match (fallback)**: Matches by token symbol, selects highest APY if multiple pools
+- Address-based matching ensures users get correct APY for their specific yield-bearing token
+- Example: aBasUSDC at address `0x4e65...` matches to Aave V3 pool specifically
+
+**Balance Service Architecture:**
+- `getSwarmMemberBalances()`: Fetches raw balances from SwarmVault API
+- `getCurrentHoldingApy()`: Enriches holdings with APY data from DeFiLlama pools
+- `filterYieldBearingHoldings()`: Filters to only yield-bearing stables above min balance
+- `getEnrichedMemberData()`: Orchestrates the full enrichment pipeline
+- `isYieldBearingStable()`: Utility to identify yield-bearing tokens by symbol pattern or address
+
+**Configuration Updates:**
+- Added `swarmVault.apiKey`, `swarmVault.apiUrl`, `swarmVault.swarmId` to config
+- Updated `.env.example` with required SwarmVault environment variables
+
+**Testing:**
+- 20 new unit tests for balance service covering:
+  - APY enrichment for various holdings
+  - Pool matching priority (address > symbol)
+  - Edge cases (empty holdings, missing pools, unknown tokens)
+  - Yield-bearing token identification
+- All 48 tests passing (21 DeFiLlama + 20 balance + 7 others)
+
+**Recommendations for Phase 4:**
+- Rotator service is already implemented from Phase 2 exploration
+- May need minor updates to `calculateRotations()` to work with new member data structure
+- Consider adding USD price feed integration for accurate `balanceUsd` values

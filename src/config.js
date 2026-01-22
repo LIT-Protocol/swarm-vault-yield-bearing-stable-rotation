@@ -12,6 +12,13 @@ export const config = {
   // API settings
   defillamaBaseUrl: 'https://yields.llama.fi',
 
+  // Swarm Vault settings
+  swarmVault: {
+    apiKey: process.env.SWARM_VAULT_API_KEY,
+    apiUrl: process.env.SWARM_VAULT_API_URL || 'https://api.swarmvault.xyz',
+    swarmId: process.env.SWARM_ID,
+  },
+
   // Swap settings
   maxSlippage: parseFloat(process.env.MAX_SLIPPAGE) || 1.0,  // 1% max slippage
   gasBuffer: 1.2,  // 20% gas buffer for safety

@@ -8,11 +8,18 @@
     "start:dry": "node src/index.js --dry-run",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
-  "keywords": ["yield", "defi", "stablecoin", "base", "swarm-vault"],
+  "keywords": [
+    "yield",
+    "defi",
+    "stablecoin",
+    "base",
+    "swarm-vault"
+  ],
   "author": "",
   "license": "ISC",
   "description": "Automated yield rotation service for Swarm Vault members on Base chain",
   "dependencies": {
+    "@swarmvault/sdk": "^1.0.1",
     "axios": "^1.6.0",
     "dotenv": "^16.3.0",
     "ethers": "^6.9.0"

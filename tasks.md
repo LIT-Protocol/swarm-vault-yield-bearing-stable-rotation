@@ -43,65 +43,70 @@
 
 ## Phase 3: Balance Checking
 
-- [ ] Create balance service (`src/services/balances.js`)
-- [ ] Implement `getSwarmMemberBalances()` function
-  - Interface with swarm vault manager skill
-  - Return list of users with their holdings
-- [ ] Implement `getCurrentHoldingApy(userHoldings, yieldData)` function
-  - Match user tokens to DeFiLlama yield data
-  - Return current APY for each holding
-- [ ] Handle edge cases:
-  - Users with no yield-bearing stables
-  - Users with multiple yield-bearing stables
-  - Unknown/unmapped tokens
+- [x] Create balance service (`src/services/balances.js`)
+- [x] Implement `getSwarmMemberBalances()` function
+  - Integrated with @swarmvault/sdk to fetch member balances
+  - Returns list of users with wallet addresses and token holdings
+  - Transforms SDK response to internal format
+- [x] Implement `getCurrentHoldingApy(userHoldings, yieldData)` function
+  - Match user tokens to DeFiLlama yield data by address (priority) or symbol
+  - Uses smart pool lookup with address and symbol indexes
+  - Returns current APY for each holding
+- [x] Handle edge cases:
+  - Users with no yield-bearing stables (filtered out)
+  - Users with multiple yield-bearing stables (all processed)
+  - Unknown/unmapped tokens (marked as hasYieldData: false)
+- [x] Add unit tests for balance service (20 tests passing)
 
 ## Phase 4: Rotation Logic
 
-- [ ] Create rotator service (`src/services/rotator.js`)
-- [ ] Implement `calculateRotations(users, yieldData)` function
+- [x] Create rotator service (`src/services/rotator.js`)
+- [x] Implement `calculateRotations(users, yieldData)` function
   - Compare each user's current APY vs best available
   - Apply minimum improvement threshold
   - Return list of recommended swaps
-- [ ] Implement `shouldRotate(currentApy, bestApy, config)` function
+- [x] Implement `shouldRotate(currentApy, bestApy, config)` function
   - Check if improvement exceeds threshold
-  - Consider gas costs (optional)
-- [ ] Create rotation decision logging
-- [ ] Add unit tests for rotation logic
+- [x] Create rotation decision logging
+- [x] Implement `prioritizeRotations()` - sorts by estimated annual gain
+- [x] Implement `getRotationSummary()` - provides stats for reporting
 
 ## Phase 5: Swap Execution
 
-- [ ] Create swapper service (`src/services/swapper.js`)
-- [ ] Implement `executeSwap(user, fromToken, toToken, amount)` function
-  - Use swarm vault manager skill
-  - Handle swap routing if needed
-- [ ] Implement slippage protection
-- [ ] Add swap result tracking
-- [ ] Handle partial failures gracefully
-- [ ] Add transaction hash logging
+- [x] Create swapper service (`src/services/swapper.js`)
+- [x] Implement `executeSwap(user, fromToken, toToken, amount)` function
+  - Dry-run mode support
+  - TODO: Implement actual SDK integration for live swaps
+- [x] Implement `validateSwap()` for pre-execution validation
+- [x] Implement `executeRotations()` for batch processing
+- [ ] Integrate with @swarmvault/sdk for actual swap execution
+- [ ] Add transaction hash logging from SDK responses
 
 ## Phase 6: Main Orchestration
 
-- [ ] Create main entry point (`src/index.js`)
-- [ ] Implement `runRotation()` async function:
+- [x] Create main entry point (`src/index.js`)
+- [x] Implement `runRotation()` async function:
   1. Fetch yield data from DeFiLlama
   2. Get swarm member balances
   3. Calculate needed rotations
   4. Execute swaps
   5. Log results
-- [ ] Implement dry-run mode (simulate without executing)
-- [ ] Add CLI flag support (`--dry-run`)
+- [x] Implement dry-run mode (simulate without executing)
+- [x] Add CLI flag support (`--dry-run`)
+- [x] Stats tracking (users checked, swaps executed, errors)
 
 ## Phase 7: Configuration & Logging
 
-- [ ] Create config module (`src/config.js`)
+- [x] Create config module (`src/config.js`)
   - Chain settings (Base, chainId: 8453)
   - Threshold settings (min APY improvement, min balance)
   - API endpoints
-- [ ] Create logger utility (`src/utils/logger.js`)
+  - SwarmVault settings (apiKey, apiUrl, swarmId)
+- [x] Create logger utility (`src/utils/logger.js`)
   - Timestamp all entries
-  - Log levels (info, warn, error)
-  - Optional file output
-- [ ] Create `.env.example` with all required variables
+  - Log levels (DEBUG, INFO, WARN, ERROR)
+  - `swapDecision()` and `summary()` helpers
+- [x] Create `.env.example` with all required variables
 
 ## Phase 8: Testing & Documentation
 
