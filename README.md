@@ -2,6 +2,17 @@
 
 A manual yield optimization service for Swarm Vault managers. Run this script to rotate swarm member stablecoin holdings into higher-yielding options on Base chain.
 
+## Create your own app like this
+This app was created with Claude Code.  We used this prompt to create the plan.md and tasks.md files:
+```
+let's create a plan.md and tasks.md for a new app. the app will run every day, once a day.  the app will use defillama to find the current APY of all the yield bearing stablecoins on Base chain.  the app will then use the swarm vault manager SDK (docs at https://raw.githubusercontent.com/LIT-Protocol/swarm-vault/refs/heads/main/packages/sdk/README.md) to check user balances.  if the highest current APY of any of the yield bearing stables is higher than whatever asset they hold, then we will swap them into it. the idea is that it rotates you between the highest yield bearing stables on a daily basis, so you don't have to, and so that you always have the highest yield.  
+```
+
+Then, we asked Claude Code to build the app with the following prompt, clearing context after each phase is completed:
+```
+read plan.md and tasks.md and complete the next phase.  mark tasks as completed when done in tasks.md.  update plan.md with learnings.
+```
+
 ## Overview
 
 Users hold yield-bearing stablecoins (like aUSDC, mUSDC, sUSDC) but yields fluctuate over time. This service:
