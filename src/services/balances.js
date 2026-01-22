@@ -39,6 +39,22 @@ function formatBalance(balance, decimals) {
 }
 
 /**
+ * Check if a token is a stablecoin (for USD value estimation)
+ * @param {string} symbol - Token symbol
+ * @returns {boolean} True if token is a stablecoin
+ */
+function isStablecoin(symbol) {
+  const stableSymbols = ['USDC', 'USDT', 'DAI', 'USDbC', 'USDBC', 'FRAX', 'LUSD', 'GUSD', 'BUSD', 'TUSD'];
+  const upperSymbol = symbol?.toUpperCase() || '';
+
+  // Check exact match or if symbol contains a stablecoin name (e.g., aUSDC, mUSDC)
+  return stableSymbols.some(stable =>
+    upperSymbol === stable ||
+    upperSymbol.includes(stable)
+  );
+}
+
+/**
  * Get balances for all swarm vault members
  * Interfaces with the swarm vault manager SDK
  * @param {string} swarmId - Optional swarm ID (uses config if not provided)
@@ -81,14 +97,19 @@ export async function getSwarmMemberBalances(swarmId = null) {
           decimals: 18,
         }] : []),
         // Include all token balances
-        ...member.tokens.map(token => ({
-          symbol: token.symbol,
-          address: token.address,
-          balance: formatBalance(token.balance, token.decimals),
-          balanceRaw: token.balance,
-          balanceUsd: 0, // Would need price feed for accurate USD value
-          decimals: token.decimals,
-        })),
+        ...member.tokens.map(token => {
+          const balance = formatBalance(token.balance, token.decimals);
+          // For stablecoins, use balance as USD value (1 USDC ≈ $1)
+          const balanceUsd = isStablecoin(token.symbol) ? balance : 0;
+          return {
+            symbol: token.symbol,
+            address: token.address,
+            balance,
+            balanceRaw: token.balance,
+            balanceUsd,
+            decimals: token.decimals,
+          };
+        }),
       ],
     }));
 
@@ -162,13 +183,16 @@ function getTokenAddressForPool(pool) {
 
 /**
  * Match a user holding to the best yield pool
- * Priority: exact address match > project+symbol match > symbol match
+ * Only matches yield-bearing tokens (aUSDC, mUSDC, etc.) to their corresponding pools
+ * Plain stablecoins (USDC, DAI) are NOT matched - they need to be rotated into yield-bearing tokens
+ *
+ * Priority: exact address match > symbol match for yield-bearing tokens only
  * @param {Object} holding - User's token holding
  * @param {Object} lookup - Pool lookup maps
  * @returns {Object|null} Matching pool or null
  */
 function matchHoldingToPool(holding, lookup) {
-  // 1. Try exact address match (most accurate)
+  // 1. Try exact address match (most accurate) - works for known yield-bearing tokens
   if (holding.address) {
     const addressMatch = lookup.byAddress.get(holding.address.toLowerCase());
     if (addressMatch) {
@@ -176,18 +200,25 @@ function matchHoldingToPool(holding, lookup) {
     }
   }
 
-  // 2. Try to find by symbol, preferring higher APY if multiple matches
-  const symbol = holding.symbol?.toLowerCase();
-  if (symbol) {
-    const symbolMatches = lookup.bySymbol.get(symbol);
+  // 2. Only match by symbol if the holding is a yield-bearing token (not plain stablecoins)
+  //    Plain USDC/DAI/etc. are NOT currently earning yield and should be rotated
+  const symbol = holding.symbol?.toUpperCase() || '';
+
+  // Check if this is a yield-bearing token (has prefix like a, c, m, s)
+  const yieldBearingPattern = /^(A|C|M|S|ABAS|CBAS|MBAS|SBAS)(USDC|USDT|DAI|USDBC)/i;
+  const isYieldBearing = yieldBearingPattern.test(symbol);
+
+  if (isYieldBearing) {
+    const symbolLower = symbol.toLowerCase();
+    const symbolMatches = lookup.bySymbol.get(symbolLower);
     if (symbolMatches && symbolMatches.length > 0) {
-      // Return the pool with highest APY if multiple matches
       return symbolMatches.reduce((best, pool) =>
         (pool.apy || 0) > (best.apy || 0) ? pool : best
       );
     }
   }
 
+  // Plain stablecoins (USDC, DAI, etc.) return null - they aren't in yield pools
   return null;
 }
 
@@ -222,29 +253,39 @@ export function getCurrentHoldingApy(userHoldings, yieldPools) {
 }
 
 /**
- * Filter holdings to only yield-bearing stablecoins
+ * Filter holdings to stablecoins eligible for yield rotation
+ * Includes both yield-bearing tokens (aUSDC, mUSDC) AND plain stablecoins (USDC, DAI)
+ * Plain stablecoins can be rotated INTO yield-bearing positions
+ *
  * @param {Array} holdings - All user holdings
  * @param {Array} yieldPools - Available yield pools
- * @returns {Array} Only holdings that match yield pools with sufficient balance
+ * @returns {Array} Stablecoins with sufficient balance for rotation
  */
 export function filterYieldBearingHoldings(holdings, yieldPools) {
   const lookup = buildPoolLookup(yieldPools);
 
-  return holdings.filter(holding => {
-    // Must have a matching yield pool
-    const hasYieldPool = matchHoldingToPool(holding, lookup) !== null;
+  // Stablecoins that can be rotated (either already yield-bearing or plain)
+  const stableSymbols = ['USDC', 'USDT', 'DAI', 'USDBC', 'FRAX', 'LUSD'];
 
-    // Must meet minimum balance (use balanceUsd if available, otherwise assume meets threshold)
+  return holdings.filter(holding => {
+    const symbol = holding.symbol?.toUpperCase() || '';
+
+    // Check if this is a stablecoin (plain or yield-bearing)
+    const isPlainStable = stableSymbols.includes(symbol);
+    const isYieldBearing = matchHoldingToPool(holding, lookup) !== null;
+    const isEligible = isPlainStable || isYieldBearing;
+
+    // Must meet minimum balance
     const meetsMinBalance = holding.balanceUsd >= config.minBalanceUsd ||
                            (holding.balanceUsd === 0 && holding.balance > 0);
 
-    if (!hasYieldPool) {
+    if (!isEligible) {
       logger.debug(`Excluding ${holding.symbol} - no matching yield pool`);
     } else if (!meetsMinBalance) {
       logger.debug(`Excluding ${holding.symbol} - balance $${holding.balanceUsd} below minimum $${config.minBalanceUsd}`);
     }
 
-    return hasYieldPool && meetsMinBalance;
+    return isEligible && meetsMinBalance;
   });
 }
 

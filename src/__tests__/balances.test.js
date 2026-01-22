@@ -217,13 +217,15 @@ describe('Balance Service', () => {
   });
 
   describe('Pool matching priority', () => {
-    it('should prefer higher APY when multiple symbol matches and no address match', () => {
-      // Holdings without a mapped address fall back to symbol matching
+    it('should not match plain USDC to yield pools (plain stables earn 0%)', () => {
+      // Plain USDC without yield-bearing prefix should NOT match to pools
+      // This ensures we recommend rotation FROM plain USDC TO yield-bearing tokens
       const holdings = [{ symbol: 'USDC', balance: 100, balanceUsd: 100 }];
       const enriched = getCurrentHoldingApy(holdings, mockYieldPools);
 
-      // Should match to moonwell USDC at 6.1% (highest APY for symbol match)
-      expect(enriched[0].currentApy).toBe(6.1);
+      // Plain USDC is not in a yield pool - it earns 0%
+      expect(enriched[0].currentApy).toBe(0);
+      expect(enriched[0].hasYieldData).toBe(false);
     });
 
     it('should prefer address match over symbol match', () => {

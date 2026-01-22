@@ -200,3 +200,38 @@ FOR each swarm member:
 - Rotator service is already implemented from Phase 2 exploration
 - May need minor updates to `calculateRotations()` to work with new member data structure
 - Consider adding USD price feed integration for accurate `balanceUsd` values
+
+### Phase 8 Learnings (2026-01-22)
+
+**Testing Architecture:**
+- ES modules with Jest require `--experimental-vm-modules` flag
+- Jest ES module mocking has limitations - avoid `jest.mock()` with require() syntax
+- Tests work best when testing actual module behavior rather than mocking heavily
+- Integration tests validate the full pipeline: DeFiLlama -> Balance -> Rotator -> Swapper
+
+**Test Coverage:**
+- 97 total tests across 5 test files:
+  - `defillama.test.js`: 21 tests - pool filtering, token address mapping, APY sorting
+  - `balances.test.js`: 20 tests - APY enrichment, pool matching, yield-bearing detection
+  - `rotator.test.js`: 24 tests - rotation decisions, prioritization, summary stats
+  - `swapper.test.js`: 14 tests - validation, execution, results structure
+  - `integration.test.js`: 18 tests - end-to-end pipeline validation
+
+**Dry-Run Mode Validation:**
+- Successfully fetches live DeFiLlama data (20,000+ pools)
+- Correctly filters to Base stablecoins with TVL >= $100k and APY <= 25%
+- Properly skips rotations below minimum balance threshold
+- Logs clear decision rationale at each step
+
+**Documentation:**
+- README.md created with comprehensive setup and usage instructions
+- Supported tokens table with contract addresses
+- Configuration options documented with defaults
+- Architecture diagram for visual understanding
+
+**Issues Found & Fixed:**
+1. **balanceUsd was 0 for stablecoins** - Fixed by detecting stablecoins and using balance as balanceUsd (1 USDC ≈ $1)
+2. **Symbol matching too aggressive** - Plain USDC was incorrectly matching to yield pools (showing 19.93% APY when it should be 0%)
+   - Fixed by only allowing yield-bearing tokens (aUSDC, mUSDC, cUSDCv3, etc.) to match to pools
+   - Plain stablecoins now correctly show 0% APY, triggering rotation recommendations
+3. **filterYieldBearingHoldings updated** - Now includes plain stablecoins (USDC, DAI) as candidates for rotation into yield-bearing positions

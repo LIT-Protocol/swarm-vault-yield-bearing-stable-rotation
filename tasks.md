@@ -110,17 +110,28 @@
 
 ## Phase 8: Testing & Documentation
 
-- [ ] Write integration tests
-- [ ] Test with dry-run mode
-- [ ] Create README.md with:
+- [x] Write integration tests
+  - Added 97 total tests covering all services
+  - Integration tests for full rotation pipeline
+  - Unit tests for rotator, swapper, balance, and defillama services
+- [x] Test with dry-run mode
+  - Verified `npm run start:dry` works correctly
+  - Fetches live DeFiLlama data and swarm member balances
+  - Simulates swaps without execution
+- [x] Create README.md with:
   - Setup instructions
   - Configuration options
   - Usage examples
-- [ ] Document supported tokens and their addresses
+  - Supported tokens table
+  - Architecture overview
+- [x] Document supported tokens and their addresses
+  - Token addresses in README.md and tasks.md
 
 ## Phase 9: Polish
 
-- [ ] Add summary output after each run
+- [x] Fixed balanceUsd calculation for stablecoins (uses balance as USD value)
+- [x] Fixed pool matching to only match yield-bearing tokens (aUSDC, mUSDC) not plain stables
+- [x] Updated filterYieldBearingHoldings to include plain stables as rotation candidates
 - [ ] Set up error alerting (optional)
 - [ ] Performance optimization if needed
 
