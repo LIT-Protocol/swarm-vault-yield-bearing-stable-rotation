@@ -13,6 +13,8 @@ Then, we asked Claude Code to build the app with the following prompt, clearing 
 read plan.md and tasks.md and complete the next phase.  mark tasks as completed when done in tasks.md.  update plan.md with learnings.
 ```
 
+If run Claude Code with `docker sandbox run claude` then it will build your app uninterrupted in a sandbox.
+
 ## Overview
 
 Users hold yield-bearing stablecoins (like aUSDC, mUSDC, sUSDC) but yields fluctuate over time. This service:
